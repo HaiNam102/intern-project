@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+@layer utilities {
+  .form-input-style {
+    @apply w-full pl-14 pr-4 py-3 rounded-md bg-[#1f2029] text-[#c4c3ca] font-medium text-sm shadow-md focus:outline-none focus:ring-0 transition-all;
+  }
+
+  .btn-style {
+    @apply bg-[#ffeba7] text-[#102770] uppercase font-bold py-2 px-6 rounded-md shadow-lg hover:bg-[#102770] hover:text-[#ffeba7] transition-all;
+  }
+
+  .perspective {
+    perspective: 800px;
+  }
+
+  .transform-style-3d {
+    transform-style: preserve-3d;
+  }
+
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .rotate-y-180 {
+    transform: rotateY(180deg);
+  }
+}
