@@ -33,10 +33,11 @@ const LoginRegister = () => {
       if (response.data.data != null) {
         // Lưu token
         localStorage.setItem('token', response.data.data.jwt);
+        document.cookie = `refreshToken=${response.data.data.jwtRefresh}; path=/; max-age=${7 * 24 * 60 * 60}; secure; samesite=strict;`;
         console.log('Navigation triggered');
         // Thêm setTimeout để đảm bảo token được lưu trước khi navigate
         setTimeout(() => {
-          navigate('/');
+          navigate('/index');
         }, 100);
       } else {
         setError('Invalid response from server');

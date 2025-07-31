@@ -11,6 +11,8 @@ import lombok.experimental.FieldDefaults;
 @RequiredArgsConstructor
 public class AuthenticationResponse {
     String jwt;
+    String jwtRefresh;
     Long userId;
     String roleName;
 }
+

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 
 const Chat = () => {
@@ -11,7 +10,6 @@ const Chat = () => {
 
   const connect = () => {
     const client = new Client({
-      webSocketFactory: () => new SockJS('http://localhost:8083/websocket'),
       onConnect: () => {
         setConnected(true);
 
@@ -26,7 +24,6 @@ const Chat = () => {
           destination: '/app/chat.register',
           body: JSON.stringify({
             sender: username,
-            type: 'JOIN'
           })
         });
       },
@@ -50,7 +47,6 @@ const Chat = () => {
         body: JSON.stringify({
           sender: username,
           content: message,
-          type: 'CHAT'
         })
       });
       setMessage('');
@@ -89,16 +85,12 @@ const Chat = () => {
           <div className="h-64 overflow-y-scroll border p-4 rounded mb-4 bg-gray-50">
             {chatMessages.map((msg, idx) => (
               <p key={idx} className="mb-1">
-                {msg.type === 'JOIN' && <em>{msg.sender} joined the chat</em>}
-                {msg.type === 'LEAVE' && <em>{msg.sender} left the chat</em>}
-                {msg.type === 'CHAT' && <strong>{msg.sender}:</strong>} {msg.type === 'CHAT' && msg.content}
+                {<strong>{msg.sender}:</strong>} {msg.content}
               </p>
             ))}
           </div>
           <div className="flex gap-2">
             <input
-              type="text"
-              placeholder="Type your message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="flex-grow border p-2 rounded"

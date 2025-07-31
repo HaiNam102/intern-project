@@ -1,9 +1,14 @@
 package com.example.chat_message.Controller;
 
+import com.example.chat_message.Dto.ApiResponse;
+import com.example.chat_message.Dto.Request.ChatMessageRequest;
+import com.example.chat_message.Dto.Response.ChatMessageResponse;
 import com.example.chat_message.Model.ChatMessage;
 import com.example.chat_message.Repository.ChatMessageRepository;
 import com.example.chat_message.Service.ChatMessageService;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -12,30 +17,35 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-@Controller
+@RestController
+@RequiredArgsConstructor
+@RequestMapping("/messages")
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class ChatController {
+    ChatMessageService chatMessageService;
 
-    /**
-     * Handles the "/chat.register" message mapping by setting the username in the session attributes
-     * and returning the received ChatMessage object.
-     */
-    @MessageMapping("/chat.register")
-    @SendTo("/topic/public")
-    public ChatMessage register(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) {
-        headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
-        return chatMessage;
+    @GetMapping
+    ApiResponse<List<ChatMessageResponse>> getMessages(
+            @RequestParam("conversationId") Long conversationId,
+            @RequestHeader("Authorization") String authHeader) {
+        return ApiResponse.<List<ChatMessageResponse>>builder()
+                .code(1000)
+                .message("get success")
+                .data(chatMessageService.getMessages(conversationId,authHeader))
+                .build();
     }
 
-    /**
-     * Handles the "/chat.send" message mapping by simply returning the received ChatMessage object,
-     * which will then be sent to all subscribers of the "/topic/public" destination.
-     */
-    @MessageMapping("/chat.send")
-    @SendTo("/topic/public")
-    public ChatMessage sendMessage(@Payload ChatMessage chatMessage) {
-        return chatMessage;
+    @PostMapping("/create")
+    ApiResponse<ChatMessageResponse> create(
+            @RequestBody @Valid ChatMessageRequest request,
+            @RequestHeader("Authorization") String authHeader ) throws JsonProcessingException {
+        return ApiResponse.<ChatMessageResponse>builder()
+                .data(chatMessageService.create(request,authHeader))
+                .build();
     }
 }

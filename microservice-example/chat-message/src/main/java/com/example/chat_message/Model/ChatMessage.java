@@ -4,8 +4,11 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
+import java.time.Instant;
+
 @Entity
 @Data
+@Table(name = "chat_message")
 @NoArgsConstructor
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -15,12 +18,16 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @Column(name = "sender")
-    String sender;
+    @ManyToOne
+    @JoinColumn(name = "conversation_id")
+    Conversation conversation;
 
-    @Column(name = "content")
-    String content;
+    @Column(name = "message")
+    String message;
+
+    @Column(name = "user_id")
+    Long user_id;
 
     @Column(name = "timestamp")
-    String timestamp;
+    Instant timestamp;
 }

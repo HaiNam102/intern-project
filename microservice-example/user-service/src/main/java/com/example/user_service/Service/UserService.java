@@ -11,23 +11,26 @@ import com.example.user_service.Model.User;
 import com.example.user_service.Repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
 public class UserService {
     UserRepository userRepository;
     UserMapper userMapper;
     JwtUtil jwtUtil;
+    RefreshTokenService refreshTokenService;
 
     public UserResponse getUserById(Long id){
         User user = userRepository.findById(id).
                 orElseThrow(()->new ApiException(ErrorCode.USER_NOT_FOUND));
         return userMapper.toUserResponse(user);
     }
+
 
     public User authenticate(String userName,String password){
         try {
@@ -51,7 +54,8 @@ public class UserService {
             throw new ApiException(ErrorCode.INVALID_USER_ACCOUNT);
         }
         String token = jwtUtil.generateToken(user.getUserId(),user.getRole().getRoleName());
-        AuthenticationResponse authenticationResponse = new AuthenticationResponse(token,user.getUserId(),user.getRole().getRoleName());
+        String refreshToken = refreshTokenService.createRefreshToken(loginRequest.getUserName()).getToken();
+        AuthenticationResponse authenticationResponse = new AuthenticationResponse(token,refreshToken,user.getUserId(),user.getRole().getRoleName());
         return authenticationResponse;
     }
 }

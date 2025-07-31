@@ -16,6 +16,9 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.catalina.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -34,18 +38,27 @@ public class OrderService {
     OrderMapper orderMapper;
     UserClient userClient;
 
-    public UserOrderResponse getOrderByUserId(String token){
-        String bearerToken = "Bearer " + token;
-        ApiResponse<UserResponse> response = userClient.getUserByToken(bearerToken);
+    public UserOrderResponse getOrderByUserId(String authHeader, int page, int size) {
+        ApiResponse<UserResponse> response = userClient.getUserByToken(authHeader);
+
         UserResponse userResponse = response.getData();
-        List<Order> orders = orderRepository.findByUserId(userResponse.getUserId());
-        List<OrderResponse> orderResponses = new ArrayList<>();
-        for(Order order : orders){
-            OrderResponse orderResponse = orderMapper.toOrderResponse(order);
-            orderResponses.add(orderResponse);
-        }
-        UserOrderResponse userOrderResponse = new UserOrderResponse(userResponse,orderResponses);
-        return userOrderResponse;
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Order> orderPage = orderRepository.findByUserId(userResponse.getUserId(), pageable);
+        
+        List<OrderResponse> orderResponses = orderPage.getContent().stream()
+                .map(orderMapper::toOrderResponse)
+                .collect(Collectors.toList());
+        
+        PageResponse pageResponse = new PageResponse(
+                orderPage.getNumber(),
+                orderPage.getSize(),
+                orderPage.getTotalElements(),
+                orderPage.getTotalPages(),
+                orderPage.isLast()
+        );
+        
+        return new UserOrderResponse(userResponse, orderResponses, pageResponse);
     }
 
     @Transactional

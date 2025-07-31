@@ -28,3 +28,28 @@ CREATE TABLE orders(
     user_id BIGINT,
     CONSTRAINT fk_orders_products FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
 );
+
+CREATE TABLE conversation(
+    conversation_id BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    type VARCHAR(25),
+    participants_hash VARCHAR(100),
+    user_id BIGINT,
+    created_date TIMESTAMP NOT NULL,
+    modified_date TIMESTAMP NOT NULL
+);
+
+CREATE TABLE chat_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id BIGINT NOT NULL,
+    message NVARCHAR(255),
+    user_id BIGINT NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    FOREIGN KEY (conversation_id) REFERENCES conversation(conversation_id)
+);
+
+CREATE TABLE web_socket_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    socket_session_id VARCHAR(255) NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);

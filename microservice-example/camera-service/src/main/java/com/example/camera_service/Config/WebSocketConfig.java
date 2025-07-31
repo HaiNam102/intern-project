@@ -1,0 +1,33 @@
+package com.example.camera_service.Config;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.config.annotation.*;
+import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
+
+@Configuration
+@EnableWebSocket
+@RequiredArgsConstructor
+public class WebSocketConfig implements WebSocketConfigurer {
+
+    private final StreamWebSocketHandler streamHandler;
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(streamHandler, "/stream").setAllowedOrigins("*");
+//                .setAllowedOrigins("*")
+//                .withSockJS(); // Thêm SockJS support
+    }
+
+    @Bean
+    public ServletServerContainerFactoryBean createWebSocketContainer() {
+        ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();
+        container.setMaxBinaryMessageBufferSize(1024 * 1024); // 1MB
+        container.setMaxTextMessageBufferSize(8192);
+        container.setMaxSessionIdleTimeout(15 * 60 * 1000L); // 15 phút
+        container.setAsyncSendTimeout(5 * 1000L); // 5 giây
+        return container;
+    }
+}
+
