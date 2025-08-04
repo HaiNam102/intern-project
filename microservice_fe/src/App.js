@@ -13,6 +13,11 @@ import EditCamera from './Component/EditCamera';
 import CameraDetail from './Component/CameraDetail';
 import CameraDashboard from './Component/CameraDashboard';
 
+// Import WebSocket test utilities for development
+if (process.env.NODE_ENV === 'development') {
+  import('./utils/websocketTest');
+}
+
 function App() {
   return (
     <Router>

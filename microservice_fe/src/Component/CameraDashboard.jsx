@@ -1,46 +1,81 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Progress, Button, Space, message, Spin } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Card, 
+  Row, 
+  Col, 
+  Statistic, 
+  Button, 
+  Space, 
+  Progress, 
+  List, 
+  Avatar, 
+  Tag, 
+  Alert,
+  Spin,
+  message
+} from 'antd';
 import { 
   CameraOutlined, 
-  CheckCircleOutlined, 
-  ExclamationCircleOutlined, 
+  EyeOutlined, 
+  PlusOutlined, 
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
   WarningOutlined,
   ReloadOutlined,
-  PlusOutlined
+  DashboardOutlined
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
 import { callGetAllCameras } from '../services/api';
+import WebSocketService from '../services/websocket';
 
 const CameraDashboard = () => {
   const navigate = useNavigate();
   const [cameras, setCameras] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    total: 0,
-    online: 0,
-    offline: 0,
-    maintenance: 0
-  });
+  const [wsConnected, setWsConnected] = useState(false);
+  const [cameraHealthStatus, setCameraHealthStatus] = useState({});
 
   useEffect(() => {
     fetchCameras();
+    connectWebSocket();
+    
+    return () => {
+      WebSocketService.unsubscribeFromCameraHealth();
+      WebSocketService.disconnect();
+    };
   }, []);
+
+  const connectWebSocket = async () => {
+    try {
+      await WebSocketService.connect();
+      setWsConnected(true);
+      
+      WebSocketService.subscribeToCameraHealth((data) => {
+        console.log('Dashboard received camera health update:', data);
+        setCameraHealthStatus(prev => ({
+          ...prev,
+          [data.cameraId]: data
+        }));
+        
+        if (data.online) {
+          message.success(`Camera ${data.cameraName} đã trực tuyến`);
+        } else {
+          message.error(`Camera ${data.cameraName} đã ngoại tuyến: ${data.errorMessage}`);
+        }
+      });
+      
+    } catch (error) {
+      console.error('Failed to connect to WebSocket:', error);
+      setWsConnected(false);
+    }
+  };
 
   const fetchCameras = async () => {
     try {
       setLoading(true);
       const response = await callGetAllCameras();
       if (response.code === 200) {
-        const cameraList = response.data || [];
-        setCameras(cameraList);
-        
-        // Calculate statistics
-        const total = cameraList.length;
-        const online = cameraList.filter(c => c.status === 'ONLINE').length;
-        const offline = cameraList.filter(c => c.status === 'OFFLINE').length;
-        const maintenance = cameraList.filter(c => c.status === 'MAINTENANCE').length;
-        
-        setStats({ total, online, offline, maintenance });
+        setCameras(response.data || []);
       } else {
         message.error('Không thể tải dữ liệu camera');
       }
@@ -52,23 +87,56 @@ const CameraDashboard = () => {
     }
   };
 
-  const getHealthPercentage = () => {
-    if (stats.total === 0) return 0;
-    return Math.round((stats.online / stats.total) * 100);
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'ONLINE':
-        return '#52c41a';
+        return 'success';
       case 'OFFLINE':
-        return '#ff4d4f';
+        return 'error';
       case 'MAINTENANCE':
-        return '#faad14';
+        return 'warning';
       default:
-        return '#d9d9d9';
+        return 'default';
     }
   };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'ONLINE':
+        return 'Trực tuyến';
+      case 'OFFLINE':
+        return 'Ngoại tuyến';
+      case 'MAINTENANCE':
+        return 'Bảo trì';
+      default:
+        return 'Không xác định';
+    }
+  };
+
+  const getRealTimeStatus = (camera) => {
+    const healthData = cameraHealthStatus[camera.cameraId];
+    if (healthData) {
+      return healthData.online ? 'ONLINE' : 'OFFLINE';
+    }
+    return camera.status;
+  };
+
+  // Calculate statistics
+  const totalCameras = cameras.length;
+  const onlineCameras = cameras.filter(camera => {
+    const realTimeStatus = getRealTimeStatus(camera);
+    return realTimeStatus === 'ONLINE';
+  }).length;
+  const offlineCameras = cameras.filter(camera => {
+    const realTimeStatus = getRealTimeStatus(camera);
+    return realTimeStatus === 'OFFLINE';
+  }).length;
+  const maintenanceCameras = cameras.filter(camera => camera.status === 'MAINTENANCE').length;
+
+  const onlinePercentage = totalCameras > 0 ? (onlineCameras / totalCameras) * 100 : 0;
+
+  // Get recent cameras (last 5)
+  const recentCameras = cameras.slice(0, 5);
 
   if (loading) {
     return (
@@ -81,20 +149,27 @@ const CameraDashboard = () => {
 
   return (
     <div style={{ padding: '20px' }}>
+      {/* Header */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '30px'
+        marginBottom: '24px'
       }}>
-        <h1 style={{ margin: 0 }}>
-          <CameraOutlined style={{ marginRight: '8px' }} />
-          Camera Dashboard
-        </h1>
+        <div>
+          <h1 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <DashboardOutlined />
+            Camera Dashboard
+          </h1>
+          <p style={{ margin: '8px 0 0 0', color: '#666' }}>
+            Tổng quan hệ thống camera và monitoring realtime
+          </p>
+        </div>
         <Space>
           <Button 
             icon={<ReloadOutlined />} 
             onClick={fetchCameras}
+            loading={loading}
           >
             Làm mới
           </Button>
@@ -105,23 +180,25 @@ const CameraDashboard = () => {
           >
             Thêm Camera
           </Button>
-             <Button 
-            type="primary" 
-            icon={<PlusOutlined />} 
-            onClick={() => navigate('/cameras')}
-          >
-            Danh sach Camera
-          </Button>
         </Space>
       </div>
 
+      {/* WebSocket Status */}
+      <Alert
+        message={wsConnected ? "Kết nối Camera thành công - Nhận cập nhật realtime" : "Không thể kết nối Camera"}
+        type={wsConnected ? "success" : "warning"}
+        icon={wsConnected ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
+        style={{ marginBottom: '24px' }}
+        showIcon
+      />
+
       {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: '30px' }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
               title="Tổng số Camera"
-              value={stats.total}
+              value={totalCameras}
               prefix={<CameraOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
@@ -130,8 +207,8 @@ const CameraDashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Đang hoạt động"
-              value={stats.online}
+              title="Camera Trực tuyến"
+              value={onlineCameras}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#52c41a' }}
             />
@@ -140,8 +217,8 @@ const CameraDashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Ngoại tuyến"
-              value={stats.offline}
+              title="Camera Ngoại tuyến"
+              value={offlineCameras}
               prefix={<ExclamationCircleOutlined />}
               valueStyle={{ color: '#ff4d4f' }}
             />
@@ -150,8 +227,8 @@ const CameraDashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Bảo trì"
-              value={stats.maintenance}
+              title="Camera Bảo trì"
+              value={maintenanceCameras}
               prefix={<WarningOutlined />}
               valueStyle={{ color: '#faad14' }}
             />
@@ -159,62 +236,57 @@ const CameraDashboard = () => {
         </Col>
       </Row>
 
-      {/* Health Status */}
-      <Row gutter={[16, 16]} style={{ marginBottom: '30px' }}>
+      {/* System Health */}
+      <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         <Col xs={24} lg={12}>
-          <Card title="Tình trạng hệ thống" size="large">
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <Progress
-                type="circle"
-                percent={getHealthPercentage()}
-                format={percent => `${percent}%`}
+          <Card title="Tình trạng Hệ thống" size="large">
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span>Tỷ lệ Camera hoạt động</span>
+                <span>{onlinePercentage.toFixed(1)}%</span>
+              </div>
+              <Progress 
+                percent={onlinePercentage} 
+                status={onlinePercentage >= 80 ? 'success' : onlinePercentage >= 50 ? 'normal' : 'exception'}
                 strokeColor={{
                   '0%': '#108ee9',
                   '100%': '#87d068',
                 }}
-                size={120}
               />
-              <div style={{ marginTop: '16px', fontSize: '16px', color: '#666' }}>
-                {stats.online}/{stats.total} camera đang hoạt động
-              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#666' }}>
+              <span>Tốt: ≥80%</span>
+              <span>Trung bình: 50-79%</span>
+              <span>Kém: &lt;50%</span>
             </div>
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Phân bố trạng thái" size="large">
-            <div style={{ padding: '20px 0' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>Đang hoạt động</span>
-                  <span>{stats.online}</span>
+          <Card title="Thống kê Nhanh" size="large">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#52c41a' }}>
+                  {onlineCameras}
                 </div>
-                <Progress 
-                  percent={stats.total > 0 ? Math.round((stats.online / stats.total) * 100) : 0} 
-                  strokeColor="#52c41a"
-                  showInfo={false}
-                />
+                <div style={{ fontSize: '14px', color: '#666' }}>Đang hoạt động</div>
               </div>
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>Ngoại tuyến</span>
-                  <span>{stats.offline}</span>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#ff4d4f' }}>
+                  {offlineCameras}
                 </div>
-                <Progress 
-                  percent={stats.total > 0 ? Math.round((stats.offline / stats.total) * 100) : 0} 
-                  strokeColor="#ff4d4f"
-                  showInfo={false}
-                />
+                <div style={{ fontSize: '14px', color: '#666' }}>Cần kiểm tra</div>
               </div>
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span>Bảo trì</span>
-                  <span>{stats.maintenance}</span>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#faad14' }}>
+                  {maintenanceCameras}
                 </div>
-                <Progress 
-                  percent={stats.total > 0 ? Math.round((stats.maintenance / stats.total) * 100) : 0} 
-                  strokeColor="#faad14"
-                  showInfo={false}
-                />
+                <div style={{ fontSize: '14px', color: '#666' }}>Đang bảo trì</div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>
+                  {totalCameras}
+                </div>
+                <div style={{ fontSize: '14px', color: '#666' }}>Tổng cộng</div>
               </div>
             </div>
           </Card>
@@ -222,53 +294,103 @@ const CameraDashboard = () => {
       </Row>
 
       {/* Recent Cameras */}
-      <Card title="Camera gần đây" size="large">
-        {cameras.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-            <CameraOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
-            <div>Chưa có camera nào</div>
-            <Button 
-              type="primary" 
-              icon={<PlusOutlined />} 
-              onClick={() => navigate('/camera/create')}
-              style={{ marginTop: '16px' }}
-            >
-              Thêm Camera đầu tiên
+      <Card title="Camera Gần đây" size="large">
+        <List
+          itemLayout="horizontal"
+          dataSource={recentCameras}
+          renderItem={(camera) => {
+            const realTimeStatus = getRealTimeStatus(camera);
+            const healthData = cameraHealthStatus[camera.cameraId];
+            
+            return (
+              <List.Item
+                actions={[
+                  <Button 
+                    type="link" 
+                    icon={<EyeOutlined />}
+                    onClick={() => navigate(`/camera/detail/${camera.cameraId}`)}
+                  >
+                    Chi tiết
+                  </Button>,
+                  <Button 
+                    type="link" 
+                    icon={<CameraOutlined />}
+                    onClick={() => navigate(`/camera/${camera.cameraId}`)}
+                  >
+                    Xem stream
+                  </Button>
+                ]}
+              >
+                <List.Item.Meta
+                  avatar={<Avatar icon={<CameraOutlined />} />}
+                  title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {camera.nameCamera}
+                      <Tag color={getStatusColor(realTimeStatus)}>
+                        {getStatusText(realTimeStatus)}
+                      </Tag>
+                    </div>
+                  }
+                  description={
+                    <div>
+                      <div>Vị trí: {camera.location}</div>
+                      {healthData && (
+                        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                          Độ phân giải: {healthData.resolution} | FPS: {healthData.fps}
+                        </div>
+                      )}
+                    </div>
+                  }
+                />
+              </List.Item>
+            );
+          }}
+        />
+        {cameras.length > 5 && (
+          <div style={{ textAlign: 'center', marginTop: '16px' }}>
+            <Button type="link" onClick={() => navigate('/cameras')}>
+              Xem tất cả camera ({cameras.length})
             </Button>
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
-            {cameras.slice(0, 6).map((camera) => (
-              <Card 
-                key={camera.id} 
-                size="small" 
-                hoverable
-                onClick={() => navigate(`/camera/detail/${camera.id}`)}
-                style={{ cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ 
-                    width: '12px', 
-                    height: '12px', 
-                    borderRadius: '50%', 
-                    backgroundColor: getStatusColor(camera.status) 
-                  }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '500', marginBottom: '4px' }}>
-                      {camera.nameCamera}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>
-                      {camera.location}
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#999' }}>
-                    ID: {camera.id}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
         )}
+      </Card>
+
+      {/* Quick Actions */}
+      <Card title="Hành động Nhanh" size="large" style={{ marginTop: '24px' }}>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={12} md={8}>
+            <Button 
+              type="primary" 
+              size="large" 
+              icon={<PlusOutlined />}
+              block
+              onClick={() => navigate('/camera/create')}
+            >
+              Thêm Camera Mới
+            </Button>
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Button 
+              size="large" 
+              icon={<CameraOutlined />}
+              block
+              onClick={() => navigate('/cameras')}
+            >
+              Quản lý Camera
+            </Button>
+          </Col>
+          <Col xs={24} sm={12} md={8}>
+            <Button 
+              size="large" 
+              icon={<ReloadOutlined />}
+              block
+              onClick={fetchCameras}
+              loading={loading}
+            >
+              Làm mới Dữ liệu
+            </Button>
+          </Col>
+        </Row>
       </Card>
     </div>
   );

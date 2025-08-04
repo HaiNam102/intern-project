@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, Button, Descriptions, Space, Tag, message, Spin, Divider } from 'antd';
+import { Card, Button, Descriptions, Space, Tag, message, Spin, Divider, Alert } from 'antd';
 import { 
   CameraOutlined,
   EditOutlined,
   ArrowLeftOutlined,
   WifiOutlined,
   EyeOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 import { callGetCameraById, callHealthCheck } from '../services/api';
+import WebSocketService from '../services/websocket';
 
 const CameraDetail = () => {
   const { id } = useParams();
@@ -17,10 +20,50 @@ const CameraDetail = () => {
   const [camera, setCamera] = useState(null);
   const [loading, setLoading] = useState(true);
   const [healthLoading, setHealthLoading] = useState(false);
+  const [healthStatus, setHealthStatus] = useState(null);
+  const [wsConnected, setWsConnected] = useState(false);
 
   useEffect(() => {
     fetchCameraDetail();
+    connectWebSocket();
+    
+    return () => {
+      // Cleanup WebSocket subscriptions
+      WebSocketService.unsubscribeFromSpecificCameraHealth(id);
+      WebSocketService.disconnect();
+    };
   }, [id]);
+
+  const connectWebSocket = async () => {
+    try {
+      await WebSocketService.connect();
+      setWsConnected(true);
+      
+      // Subscribe to specific camera health updates
+      WebSocketService.subscribeToSpecificCameraHealth(id, (data) => {
+        console.log('Received camera health update:', data);
+        setHealthStatus(data);
+        
+        // Show notification based on status
+        if (data.isOnline) {
+          message.success(`Camera ${data.cameraName} đã trực tuyến`);
+        } else {
+          message.error(`Camera ${data.cameraName} đã ngoại tuyến: ${data.errorMessage}`);
+        }
+      });
+      
+      // Also subscribe to general camera health updates
+      WebSocketService.subscribeToCameraHealth((data) => {
+        if (data.cameraId === parseInt(id)) {
+          setHealthStatus(data);
+        }
+      });
+      
+    } catch (error) {
+      console.error('Failed to connect to WebSocket:', error);
+      setWsConnected(false);
+    }
+  };
 
   const fetchCameraDetail = async () => {
     try {
@@ -42,15 +85,19 @@ const CameraDetail = () => {
   const handleCheckHealth = async () => {
     setHealthLoading(true);
     try {
+      message.loading('Đang kiểm tra sức khỏe camera...', 0);
       const response = await callHealthCheck(id);
+      message.destroy();
+      
       if (response.code === 200) {
-        message.success('Đã kiểm tra sức khỏe camera thành công');
+        message.success('Đã kiểm tra sức khỏe camera - Kết quả sẽ được cập nhật trong vài giây');
         // Refresh camera data after health check
         await fetchCameraDetail();
       } else {
         message.error(response.message || 'Có lỗi xảy ra khi kiểm tra sức khỏe camera');
       }
     } catch (error) {
+      message.destroy();
       console.error('Error checking camera health:', error);
       message.error('Không thể kiểm tra sức khỏe camera');
     } finally {
@@ -162,6 +209,35 @@ const CameraDetail = () => {
           </Button>
         </Space>
       </div>
+
+      {/* WebSocket Connection Status */}
+      <Alert
+        message={wsConnected ? "Kết nối WebSocket thành công" : "Không thể kết nối WebSocket"}
+        type={wsConnected ? "success" : "warning"}
+        icon={wsConnected ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
+        style={{ marginBottom: '16px' }}
+        showIcon
+      />
+
+      {/* Real-time Health Status */}
+      {healthStatus && (
+        <Alert
+          message={`Trạng thái camera: ${healthStatus.online ? 'Trực tuyến' : 'Ngoại tuyến'}`}
+          description={
+            <div>
+              <p><strong>Độ phân giải:</strong> {healthStatus.resolution}</p>
+              <p><strong>FPS:</strong> {healthStatus.fps}</p>
+              <p><strong>Thời gian cập nhật:</strong> {new Date(healthStatus.timestamp).toLocaleString('vi-VN')}</p>
+              {healthStatus.errorMessage && (
+                <p><strong>Lỗi:</strong> {healthStatus.errorMessage}</p>
+              )}
+            </div>
+          }
+          type={healthStatus.online ? "success" : "error"}
+          style={{ marginBottom: '16px' }}
+          showIcon
+        />
+      )}
 
       <div style={{ 
         marginBottom: '20px', 

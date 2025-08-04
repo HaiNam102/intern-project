@@ -32,7 +32,7 @@ public class CameraService {
         return cameraRes;
     }
 
-    public Camera   updateCamera(Long id, CameraReq cameraReq) {
+    public Camera updateCamera(Long id, CameraReq cameraReq) {
         Camera camera = cameraRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.CAMERA_NOT_FOUND));
         camera = cameraMapper.toCamera(cameraReq);
