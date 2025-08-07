@@ -11,8 +11,8 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons';
-import { callGetCameraById, callHealthCheck } from '../services/api';
-import WebSocketService from '../services/websocket';
+import { callGetCameraById, callHealthCheck } from '../../services/api';
+import WebSocketService from '../../services/websocket';
 
 const CameraDetail = () => {
   const { id } = useParams();

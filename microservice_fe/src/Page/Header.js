@@ -29,6 +29,7 @@ const Header = () => {
             <Link to="/history" className="hover:text-gray-300">History</Link>
             <Link to="/cart" className="hover:text-gray-300">Cart</Link>
             <Link to="/camera/dashboard" className="hover:text-gray-300">Cameras</Link>
+            <Link to="/chat" className="hover:text-gray-300">Chat</Link>
             
             {!isLoggedIn ? (
               <Link to="/login" className="hover:text-gray-300">Login</Link>

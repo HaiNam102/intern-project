@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, Badge, Descriptions, Space, Tag, message, Spin, Modal, Popconfirm, Alert } from 'antd';
+import { Card, Button, Badge, Descriptions, Space, Tag, message, Spin, Modal, Popconfirm, Alert, Image, Tooltip } from 'antd';
 import { 
   PlayCircleOutlined, 
   StopOutlined, 
@@ -20,8 +20,8 @@ import {
   callGetAllCameras, 
   callDeleteCamera, 
   callHealthCheck 
-} from '../services/api';
-import WebSocketService from '../services/websocket';
+} from '../../services/api';
+import WebSocketService from '../../services/websocket';
 
 const CameraList = () => {
   const navigate = useNavigate();
@@ -102,6 +102,14 @@ const CameraList = () => {
   };
 
   const handleViewStream = (camera) => {
+    const realTimeStatus = getRealTimeStatus(camera);
+    const displayStatus = realTimeStatus ? realTimeStatus.status : camera.status;
+    
+    if (displayStatus !== 'ONLINE') {
+      message.warning('Camera đang offline - Không thể xem stream');
+      return;
+    }
+    
     navigate(`/camera/${camera.cameraId}`, { 
       state: { camera } 
     });
@@ -197,6 +205,30 @@ const CameraList = () => {
     return null;
   };
 
+  // Function to get camera image based on camera ID
+  const getCameraImage = (cameraId) => {
+    const imageMap = {
+      1: '/images/camera-1.svg',
+      2: '/images/camera-2.svg',
+      3: '/images/camera-3.svg'
+    };
+    return imageMap[cameraId] || '/images/camera-default.svg';
+  };
+
+  // Function to get camera image based on status
+  const getCameraImageByStatus = (status) => {
+    switch (status) {
+      case 'ONLINE':
+        return '/images/camera-1.svg';
+      case 'OFFLINE':
+        return '/images/camera-2.svg';
+      case 'MAINTENANCE':
+        return '/images/camera-3.svg';
+      default:
+        return '/images/camera-default.svg';
+    }
+  };
+
   if (loading) {
     return (
       <div style={{ padding: '20px', textAlign: 'center' }}>
@@ -210,7 +242,7 @@ const CameraList = () => {
     <div style={{ padding: '20px' }}>
       {/* System Status */}
       <Alert
-        message="Hệ thống tự động kiểm tra camera mỗi 30 giây - Thống kê real-time"
+        message="Hệ thống tự động kiểm tra camera mỗi 10 giây - Thống kê real-time"
         type="info"
         icon={<CheckCircleOutlined />}
         style={{ marginBottom: '20px' }}
@@ -254,7 +286,7 @@ const CameraList = () => {
 
       {/* WebSocket Connection Status */}
       <Alert
-        message={wsConnected ? "Kết nối WebSocket thành công - Nhận cập nhật realtime" : "Không thể kết nối WebSocket"}
+        message={wsConnected ? "Kết nối Camera thành công - Nhận cập nhật realtime" : "Không thể kết nối WebSocket"}
         type={wsConnected ? "success" : "warning"}
         icon={wsConnected ? <CheckCircleOutlined /> : <ExclamationCircleOutlined />}
         style={{ marginBottom: '16px' }}
@@ -272,12 +304,24 @@ const CameraList = () => {
           <InfoCircleOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
           <strong>Camera Service Integration</strong>
         </div>
-        <p style={{ margin: '0', fontSize: '14px', color: '#666' }}>
-          Tổng số camera: <strong>{cameras.length}</strong> | 
-          WebSocket: <Tag color={wsConnected ? 'success' : 'error'}>
-            {wsConnected ? 'Kết nối' : 'Ngắt kết nối'}
-          </Tag>
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CameraOutlined style={{ color: '#52c41a' }} />
+            <span>Tổng số camera: <strong>{cameras.length}</strong></span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <WifiOutlined style={{ color: wsConnected ? '#52c41a' : '#ff4d4f' }} />
+            <span>WebSocket: </span>
+            <Tag color={wsConnected ? 'success' : 'error'}>
+              {wsConnected ? 'Kết nối' : 'Ngắt kết nối'}
+            </Tag>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckCircleOutlined style={{ color: '#52c41a' }} />
+            <span>Hình ảnh: </span>
+            <Tag color="blue">Đã bật</Tag>
+          </div>
+        </div>
       </div>
       
       {cameras.length === 0 ? (
@@ -288,7 +332,17 @@ const CameraList = () => {
           borderRadius: '8px',
           border: '1px dashed #d9d9d9'
         }}>
-          <CameraOutlined style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: '16px' }} />
+          <Image
+            src="/images/camera-default.svg"
+            alt="No cameras"
+            style={{ 
+              maxWidth: '200px', 
+              maxHeight: '150px',
+              marginBottom: '16px',
+              opacity: 0.5
+            }}
+            preview={false}
+          />
           <h3 style={{ color: '#666', marginBottom: '8px' }}>Chưa có camera nào</h3>
           <p style={{ color: '#999', marginBottom: '16px' }}>Hãy thêm camera đầu tiên để bắt đầu</p>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateCamera}>
@@ -296,14 +350,67 @@ const CameraList = () => {
           </Button>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(450px, 1fr))', gap: '20px' }}>
           {cameras.map((camera) => {
             const realTimeStatus = getRealTimeStatus(camera);
             const displayStatus = realTimeStatus ? realTimeStatus.status : camera.status;
+            const cameraImage = getCameraImageByStatus(displayStatus);
             
             return (
               <Card
                 key={camera.cameraId}
+                cover={
+                  <div style={{ 
+                    padding: '20px', 
+                    backgroundColor: displayStatus === 'ONLINE' ? '#f6ffed' : 
+                                   displayStatus === 'OFFLINE' ? '#fff2f0' : '#f8f9fa', 
+                    textAlign: 'center',
+                    borderBottom: '1px solid #f0f0f0',
+                    position: 'relative'
+                  }}>
+                    <Image
+                      src={cameraImage}
+                      alt={`Camera ${camera.nameCamera}`}
+                      style={{ 
+                        maxWidth: '200px', 
+                        maxHeight: '150px',
+                        objectFit: 'contain',
+                        filter: displayStatus === 'OFFLINE' ? 'grayscale(50%)' : 'none'
+                      }}
+                      preview={false}
+                    />
+                    {displayStatus === 'ONLINE' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: '#52c41a',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        ONLINE
+                      </div>
+                    )}
+                    {displayStatus === 'OFFLINE' && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '10px',
+                        right: '10px',
+                        background: '#ff4d4f',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        OFFLINE
+                      </div>
+                    )}
+                  </div>
+                }
                 title={
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CameraOutlined />
@@ -319,33 +426,39 @@ const CameraList = () => {
                 }
                 extra={
                   <Space>
-                    <Button
-                      type="text"
-                      icon={<WifiOutlined />}
-                      onClick={() => handleCheckHealth(camera.cameraId)}
-                      size="small"
-                      title="Kiểm tra sức khỏe"
-                    >
-                      Kiểm tra
-                    </Button>
-                    <Button
-                      type="text"
-                      icon={<InfoCircleOutlined />}
-                      onClick={() => handleViewDetail(camera)}
-                      size="small"
-                      title="Xem chi tiết"
-                    >
-                      Chi tiết
-                    </Button>
-                    <Button
-                      type="text"
-                      icon={<EditOutlined />}
-                      onClick={() => handleEditCamera(camera)}
-                      size="small"
-                      title="Chỉnh sửa"
-                    >
-                      Sửa
-                    </Button>
+                    <Tooltip title="Kiểm tra sức khỏe camera">
+                      <Button
+                        type="text"
+                        icon={<WifiOutlined />}
+                        onClick={() => handleCheckHealth(camera.cameraId)}
+                        size="small"
+                        style={{
+                          color: displayStatus === 'ONLINE' ? '#52c41a' : '#ff4d4f'
+                        }}
+                      >
+                        Kiểm tra
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="Xem chi tiết camera">
+                      <Button
+                        type="text"
+                        icon={<InfoCircleOutlined />}
+                        onClick={() => handleViewDetail(camera)}
+                        size="small"
+                      >
+                        Chi tiết
+                      </Button>
+                    </Tooltip>
+                    <Tooltip title="Chỉnh sửa camera">
+                      <Button
+                        type="text"
+                        icon={<EditOutlined />}
+                        onClick={() => handleEditCamera(camera)}
+                        size="small"
+                      >
+                        Sửa
+                      </Button>
+                    </Tooltip>
                     <Popconfirm
                       title="Xóa camera"
                       description="Bạn có chắc chắn muốn xóa camera này?"
@@ -364,13 +477,22 @@ const CameraList = () => {
                         Xóa
                       </Button>
                     </Popconfirm>
-                    <Button
-                      type="primary"
-                      icon={<EyeOutlined />}
-                      onClick={() => handleViewStream(camera)}
+                    <Tooltip 
+                      title={displayStatus !== 'ONLINE' ? 'Camera đang offline - Không thể xem stream' : 'Xem stream camera'}
                     >
-                      Xem stream
-                    </Button>
+                      <Button
+                        type={displayStatus === 'ONLINE' ? 'primary' : 'default'}
+                        icon={<EyeOutlined />}
+                        onClick={() => handleViewStream(camera)}
+                        disabled={displayStatus !== 'ONLINE'}
+                        style={{
+                          opacity: displayStatus === 'ONLINE' ? 1 : 0.6,
+                          color: displayStatus === 'ONLINE' ? undefined : '#999'
+                        }}
+                      >
+                        Xem stream
+                      </Button>
+                    </Tooltip>
                   </Space>
                 }
                 hoverable
@@ -383,20 +505,34 @@ const CameraList = () => {
                     <code style={{ fontSize: '12px' }}>{camera.streamUrl}</code>
                   </Descriptions.Item>
                   <Descriptions.Item label="Trạng thái">
-                    <Tag color={getStatusColor(displayStatus)}>
-                      {getStatusText(displayStatus)}
-                    </Tag>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Tag color={getStatusColor(displayStatus)}>
+                        {getStatusText(displayStatus)}
+                      </Tag>
+                      {displayStatus === 'ONLINE' && (
+                        <Tag color="green" icon={<CheckCircleOutlined />}>
+                          Hoạt động
+                        </Tag>
+                      )}
+                      {displayStatus === 'OFFLINE' && (
+                        <Tag color="red" icon={<ExclamationCircleOutlined />}>
+                          Không kết nối
+                        </Tag>
+                      )}
+                    </div>
                   </Descriptions.Item>
                   {realTimeStatus && (
                     <>
                       <Descriptions.Item label="Độ phân giải">
-                        {realTimeStatus.resolution}
+                        <Tag color="blue">{realTimeStatus.resolution}</Tag>
                       </Descriptions.Item>
                       <Descriptions.Item label="FPS">
-                        {realTimeStatus.fps}
+                        <Tag color="cyan">{realTimeStatus.fps}</Tag>
                       </Descriptions.Item>
                       <Descriptions.Item label="Cập nhật lúc">
-                        {new Date(realTimeStatus.timestamp).toLocaleString('vi-VN')}
+                        <Tag color="purple">
+                          {new Date(realTimeStatus.timestamp).toLocaleString('vi-VN')}
+                        </Tag>
                       </Descriptions.Item>
                       {realTimeStatus.errorMessage && (
                         <Descriptions.Item label="Lỗi">

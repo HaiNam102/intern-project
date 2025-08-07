@@ -37,7 +37,7 @@ const LoginRegister = () => {
         console.log('Navigation triggered');
         // Thêm setTimeout để đảm bảo token được lưu trước khi navigate
         setTimeout(() => {
-          navigate('/index');
+          navigate('/');
         }, 100);
       } else {
         setError('Invalid response from server');

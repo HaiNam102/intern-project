@@ -5,13 +5,13 @@ import OrderHistory from './Component/OrderHistory';
 import './App.css';
 import 'antd/dist/reset.css'; // Import Ant Design CSS
 import Cart from './Component/Cart';
-import Chat from './Component/Chat';
-import CameraList from './Component/CameraList';
-import CameraStream from './Component/CameraStream';
-import CreateCamera from './Component/CreateCamera';
-import EditCamera from './Component/EditCamera';
-import CameraDetail from './Component/CameraDetail';
-import CameraDashboard from './Component/CameraDashboard';
+import Chat from './Component/Chat/Chat';
+import CameraList from './Component/Camera/CameraList';
+import CameraStream from './Component/Camera/CameraStream';
+import CreateCamera from './Component/Camera/CreateCamera';
+import EditCamera from './Component/Camera/EditCamera';
+import CameraDetail from './Component/Camera/CameraDetail';
+import CameraDashboard from './Component/Camera/CameraDashboard';
 
 // Import WebSocket test utilities for development
 if (process.env.NODE_ENV === 'development') {

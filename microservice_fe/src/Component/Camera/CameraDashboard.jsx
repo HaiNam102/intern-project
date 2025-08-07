@@ -25,8 +25,8 @@ import {
   ReloadOutlined,
   DashboardOutlined
 } from '@ant-design/icons';
-import { callGetAllCameras } from '../services/api';
-import WebSocketService from '../services/websocket';
+import { callGetAllCameras } from '../../services/api';
+import WebSocketService from '../../services/websocket';
 
 const CameraDashboard = () => {
   const navigate = useNavigate();

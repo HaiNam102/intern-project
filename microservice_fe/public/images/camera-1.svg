@@ -1,0 +1,20 @@
+<svg width="200" height="150" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Camera body -->
+  <rect x="20" y="40" width="160" height="70" rx="10" fill="#2c3e50" stroke="#34495e" stroke-width="2"/>
+  
+  <!-- Camera lens -->
+  <circle cx="100" cy="75" r="25" fill="#34495e" stroke="#2c3e50" stroke-width="3"/>
+  <circle cx="100" cy="75" r="20" fill="#5d6d7e"/>
+  <circle cx="100" cy="75" r="15" fill="#85929e"/>
+  <circle cx="100" cy="75" r="10" fill="#aeb6bf"/>
+  
+  <!-- Camera mount -->
+  <rect x="85" y="110" width="30" height="20" fill="#7f8c8d" rx="5"/>
+  
+  <!-- Status indicator -->
+  <circle cx="160" cy="50" r="8" fill="#27ae60"/>
+  
+  <!-- Camera details -->
+  <rect x="30" y="120" width="140" height="20" rx="5" fill="#ecf0f1"/>
+  <text x="100" y="133" text-anchor="middle" font-family="Arial" font-size="10" fill="#2c3e50">Camera 1</text>
+</svg> 

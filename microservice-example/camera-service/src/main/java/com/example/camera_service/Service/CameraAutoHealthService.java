@@ -1,5 +1,6 @@
 package com.example.camera_service.Service;
 
+import com.example.camera_service.Config.EmailConfig;
 import com.example.camera_service.Dto.Res.CameraRes;
 import com.example.camera_service.Repository.CameraRepository;
 import lombok.AccessLevel;
@@ -13,6 +14,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -23,9 +26,12 @@ public class CameraAutoHealthService {
     
     CameraService cameraService;
     CameraHealthService cameraHealthService;
-    CameraRepository cameraRepository;
+    EmailService emailService;
+    EmailConfig emailConfig;
+    Map<Long, Boolean> cameraPreviousStatus = new ConcurrentHashMap<>();
+//    CameraRepository cameraRepository;
 
-    @Scheduled(fixedRate = 10000) // 30 seconds
+    @Scheduled(fixedRate = 5000) // 10 seconds
     public void autoCheckAllCameras() {
         log.info("Bắt đầu kiểm tra sức khỏe tự động cho tất cả camera...");
         
@@ -85,14 +91,51 @@ public class CameraAutoHealthService {
         try {
             log.info("Auto check - Cập nhật trạng thái camera {}: {}", cameraRes.getNameCamera(), isOnline ? "ONLINE" : "OFFLINE");
             
+            // Lấy trạng thái trước đó của camera
+            Boolean previousStatus = cameraPreviousStatus.get(cameraRes.getCameraId());
+            
             // Gọi service kiểm tra sức khỏe để cập nhật trạng thái và gửi WebSocket
             cameraHealthService.checkCameraHealth(cameraRes.getCameraId());
             
+            // Kiểm tra xem có sự thay đổi trạng thái không
+            boolean statusChanged = previousStatus == null || !previousStatus.equals(isOnline);
+            
             if (!isOnline) {
                 log.info("Camera {} đã được đánh dấu offline", cameraRes.getNameCamera());
+                
+                // Chỉ gửi email khi camera chuyển từ online sang offline
+                if (statusChanged && emailConfig.isEnableEmailNotifications()) {
+                    try {
+                        for (String email : emailConfig.getAdminEmails()) {
+                            emailService.sendCameraOfflineNotification(email, cameraRes, errorMessage);
+                            log.info("Đã gửi email thông báo camera {} offline đến {} (trạng thái thay đổi)", cameraRes.getNameCamera(), email);
+                        }
+                    } catch (Exception e) {
+                        log.error("Lỗi khi gửi email thông báo camera {} offline: {}", cameraRes.getNameCamera(), e.getMessage());
+                    }
+                } else if (!statusChanged) {
+                    log.info("Camera {} vẫn offline, không gửi email thông báo", cameraRes.getNameCamera());
+                }
             } else {
                 log.info("Camera {} đã được đánh dấu online", cameraRes.getNameCamera());
+                
+                // Chỉ gửi email khi camera chuyển từ offline sang online
+                if (statusChanged && emailConfig.isEnableEmailNotifications() && emailConfig.isEnableOnlineNotifications()) {
+                    try {
+                        for (String email : emailConfig.getAdminEmails()) {
+                            emailService.sendCameraOnlineNotification(email, cameraRes);
+                            log.info("Đã gửi email thông báo camera {} online đến {} (trạng thái thay đổi)", cameraRes.getNameCamera(), email);
+                        }
+                    } catch (Exception e) {
+                        log.error("Lỗi khi gửi email thông báo camera {} online: {}", cameraRes.getNameCamera(), e.getMessage());
+                    }
+                } else if (!statusChanged) {
+                    log.info("Camera {} vẫn online, không gửi email thông báo", cameraRes.getNameCamera());
+                }
             }
+            
+            // Cập nhật trạng thái hiện tại vào map
+            cameraPreviousStatus.put(cameraRes.getCameraId(), isOnline);
             
         } catch (Exception e) {
             log.error("Lỗi khi cập nhật trạng thái camera {}: {}", cameraRes.getNameCamera(), e.getMessage());
@@ -106,5 +149,24 @@ public class CameraAutoHealthService {
         } catch (Exception e) {
             log.error("Lỗi khi kiểm tra camera {}: {}", cameraId, e.getMessage());
         }
+    }
+    
+    public EmailService getEmailService() {
+        return emailService;
+    }
+    
+    public EmailConfig getEmailConfig() {
+        return emailConfig;
+    }
+    
+    // Method để xóa trạng thái camera khỏi map (khi camera bị xóa)
+    public void removeCameraStatus(Long cameraId) {
+        cameraPreviousStatus.remove(cameraId);
+        log.info("Đã xóa trạng thái camera {} khỏi bộ nhớ", cameraId);
+    }
+    
+    // Method để xem trạng thái hiện tại của tất cả camera
+    public Map<Long, Boolean> getCameraStatusMap() {
+        return new ConcurrentHashMap<>(cameraPreviousStatus);
     }
 } 

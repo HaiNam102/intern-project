@@ -1,91 +1,89 @@
-// WebSocket Test Utility
-// Sử dụng để test WebSocket connection và message handling
+// WebSocket connection test utility
+import { io } from 'socket.io-client';
 
-import WebSocketService from '../services/websocket';
+export const testWebSocketConnection = () => {
+  return new Promise((resolve, reject) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      reject(new Error('No authentication token found'));
+      return;
+    }
 
-export const testWebSocketConnection = async () => {
-  console.log('Testing WebSocket connection...');
-  
-  try {
-    await WebSocketService.connect();
-    console.log('✅ WebSocket connected successfully');
+    console.log('Testing WebSocket connection...');
     
-    // Test subscription to all camera health updates
-    WebSocketService.subscribeToCameraHealth((data) => {
-      console.log('📡 Received camera health update:', data);
-    });
-    
-    // Test subscription to specific camera
-    WebSocketService.subscribeToSpecificCameraHealth(1, (data) => {
-      console.log('📡 Received specific camera health update:', data);
-    });
-    
-    console.log('✅ WebSocket subscriptions created');
-    
-    // Test disconnect after 10 seconds
-    setTimeout(() => {
-      console.log('🔄 Testing disconnect...');
-      WebSocketService.disconnect();
-      console.log('✅ WebSocket disconnected');
-    }, 10000);
-    
-  } catch (error) {
-    console.error('❌ WebSocket connection failed:', error);
-  }
-};
-
-export const testCameraHealthCheck = async (cameraId) => {
-  console.log(`Testing camera health check for camera ${cameraId}...`);
-  
-  try {
-    const response = await fetch(`http://localhost:8080/api/cameras/${cameraId}/check-health`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const socket = io('http://localhost:8099', {
+      auth: {
+        token: token
       },
+      transports: ['websocket', 'polling'],
+      timeout: 5000
     });
-    
-    const data = await response.json();
-    console.log('📊 Health check response:', data);
-    
-    if (response.ok) {
-      console.log('✅ Health check successful');
-    } else {
-      console.log('❌ Health check failed');
-    }
-    
-  } catch (error) {
-    console.error('❌ Health check error:', error);
-  }
+
+    socket.on('connect', () => {
+      console.log('✅ WebSocket connection successful');
+      socket.disconnect();
+      resolve(true);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ WebSocket connection failed:', error);
+      socket.disconnect();
+      reject(error);
+    });
+
+    // Timeout after 5 seconds
+    setTimeout(() => {
+      socket.disconnect();
+      reject(new Error('WebSocket connection timeout'));
+    }, 5000);
+  });
 };
 
-export const monitorWebSocketStatus = () => {
-  const checkConnection = () => {
-    const isConnected = WebSocketService.isConnected();
-    console.log(`🔗 WebSocket status: ${isConnected ? 'Connected' : 'Disconnected'}`);
-    
-    if (!isConnected) {
-      console.log('🔄 Attempting to reconnect...');
-      WebSocketService.connect().catch(console.error);
+export const testChatMessage = async (conversationId, message) => {
+  return new Promise((resolve, reject) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      reject(new Error('No authentication token found'));
+      return;
     }
-  };
-  
-  // Check connection status every 30 seconds
-  setInterval(checkConnection, 30000);
-  
-  console.log('📡 WebSocket monitoring started');
-};
 
-// Export test functions for use in browser console
-if (typeof window !== 'undefined') {
-  window.testWebSocket = {
-    testConnection: testWebSocketConnection,
-    testHealthCheck: testCameraHealthCheck,
-    monitorStatus: monitorWebSocketStatus,
-  };
-  
-  console.log('🧪 WebSocket test utilities available:');
-  console.log('- window.testWebSocket.testConnection()');
-  console.log('- window.testWebSocket.testHealthCheck(cameraId)');
-  console.log('- window.testWebSocket.monitorStatus()');
-}
+    const socket = io('http://localhost:8099', {
+      auth: {
+        token: token
+      },
+      transports: ['websocket', 'polling']
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected, joining conversation...');
+      socket.emit('join_conversation', { conversationId });
+      
+      setTimeout(() => {
+        console.log('Sending test message...');
+        socket.emit('send_message', {
+          conversationId,
+          message,
+          timestamp: new Date().toISOString()
+        });
+      }, 1000);
+    });
+
+    socket.on('message', (data) => {
+      console.log('✅ Received message:', data);
+      socket.disconnect();
+      resolve(data);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ Connection error:', error);
+      socket.disconnect();
+      reject(error);
+    });
+
+    // Timeout after 10 seconds
+    setTimeout(() => {
+      socket.disconnect();
+      reject(new Error('Test timeout'));
+    }, 10000);
+  });
+};

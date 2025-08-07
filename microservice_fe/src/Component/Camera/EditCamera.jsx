@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { callGetCameraById, callUpdateCamera } from '../services/api';
+import { callGetCameraById, callUpdateCamera } from '../../services/api';
 
 const EditCamera = () => {
   const navigate = useNavigate();

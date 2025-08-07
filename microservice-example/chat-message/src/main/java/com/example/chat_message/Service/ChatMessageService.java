@@ -92,35 +92,32 @@ public class ChatMessageService {
         // Create chat message
         chatMessage = chatMessageRepository.save(chatMessage);
 
-        // Publish socket event to clients is conversation
-        // Get participants userIds;
-        List<Long> userIds = conversation.getUsers();
-
-        Map<String, WebSocketSession> webSocketSessions =
-                webSocketSessionRepository
-                        .findAllByUserIdIn(userIds).stream()
-                        .collect(Collectors.toMap(
-                                WebSocketSession::getSocketSessionId,
-                                Function.identity()));
-
+        // Convert to Response
         ChatMessageResponse chatMessageResponse = chatMessageMapper.toChatMessageResponse(chatMessage);
-        socketIOServer.getAllClients().forEach(client -> {
-            var webSocketSession = webSocketSessions.get(client.getSessionId().toString());
+        
+        // Broadcast message via Socket.IO to all participants in the conversation
+        try {
+            String conversationId = request.getConversationId().toString();
+            
+            // Create message data for Socket.IO
+            Map<String, Object> messageData = Map.of(
+                "id", chatMessageResponse.getId(),
+                "conversationId", chatMessageResponse.getConversationId(),
+                "message", chatMessageResponse.getMessage(),
+                "userId", chatMessageResponse.getSender(),
+                "timestamp", chatMessageResponse.getCreatedDate(),
+                "me", false // Will be set to true for the sender
+            );
+            
+            // Broadcast to all clients in the conversation room
+            socketIOServer.getRoomOperations(conversationId).sendEvent("message", messageData);
+            
+            log.info("Message broadcasted to conversation {}: {}", conversationId, chatMessageResponse.getMessage());
+            
+        } catch (Exception e) {
+            log.error("Error broadcasting message via Socket.IO: {}", e.getMessage());
+        }
 
-            if (Objects.nonNull(webSocketSession)) {
-                String message = null;
-                try {
-                    chatMessageResponse.setMe(webSocketSession.getUserId().equals(userId));
-                    message = objectMapper.writeValueAsString(chatMessageResponse);
-                    client.sendEvent("message", message);
-                } catch (JsonProcessingException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        });
-
-
-        // convert to Response
         return chatMessageResponse;
     }
 }

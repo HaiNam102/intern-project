@@ -125,12 +125,4 @@ public class StreamWebSocketHandler extends BinaryWebSocketHandler {
         }
     }
 
-//    public String getRtspUrl(Long cameraId) {
-//        return switch (cameraId.toString()) {
-//            case "1" -> "rtsp://localhost:8554/mystream";
-//            case "2" -> "rtsp://localhost:8554/mystream1";
-//            case "3" -> "rtsp://localhost:8554/mystream3";
-//            default -> null;
-//        };
-//    }
 }
