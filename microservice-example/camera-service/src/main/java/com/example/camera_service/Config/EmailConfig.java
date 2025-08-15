@@ -10,8 +10,8 @@ import java.util.List;
 public class EmailConfig {
     
     private List<String> adminEmails = List.of("hainamluu01@gmail.com");
-    private boolean enableEmailNotifications = true;
-    private boolean enableOnlineNotifications = true;
+    private boolean enableEmailNotifications = false;
+    private boolean enableOnlineNotifications = false;
     
     public List<String> getAdminEmails() {
         return adminEmails;

@@ -1,0 +1,154 @@
+package com.example.realtime_shelf_osa.Service;
+
+import com.example.realtime_shelf_osa.Model.RealtimeShelfDetail;
+import com.example.realtime_shelf_osa.Model.RealtimeShelfOsaRate;
+import com.example.realtime_shelf_osa.Model.Shelf;
+import com.example.realtime_shelf_osa.Repository.RealtimeShelfDetailRepository;
+import com.example.realtime_shelf_osa.Repository.RealtimeShelfOsaRateRepository;
+import com.example.realtime_shelf_osa.Repository.ShelfRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.ReadOffset;
+import org.springframework.data.redis.connection.stream.StreamOffset;
+import org.springframework.data.redis.connection.stream.StreamReadOptions;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+class RedisStreamListenerService {
+    StringRedisTemplate redisTemplate;
+    ObjectMapper objectMapper;
+    RealtimeShelfDetailRepository detailRepo;
+    RealtimeShelfOsaRateRepository osaRepo;
+    ShelfRepository shelfRepo;
+    SimpMessagingTemplate messagingTemplate;
+
+    private static final String STREAM_KEY = "shelf_updates";
+
+    @PostConstruct
+    public void startListening() {
+        new Thread(() -> {
+            String lastId = "0"; // đọc từ đầu, dùng "$" nếu chỉ đọc mới
+            while (true) {
+                try {
+                    // Đọc 1 record mới nhất
+                    List<MapRecord<String, Object, Object>> records = redisTemplate.opsForStream()
+                            .read(StreamReadOptions.empty()
+                                            .count(1)
+                                            .block(Duration.ZERO),
+                                    StreamOffset.create(STREAM_KEY, ReadOffset.from(lastId)));
+
+                    if (records != null) {
+                        for (MapRecord<String, Object, Object> record : records) {
+                            lastId = record.getId().getValue();
+                            String json = (String) record.getValue().get("data");
+
+                            // Parse JSON
+                            Map<String, Object> payload = objectMapper.readValue(json, Map.class);
+
+                            // Phân loại theo "type"
+                            String type = (String) payload.get("type");
+                            switch (type) {
+                                case "RealtimeShelfDetail" -> saveDetail(payload);
+                                case "RealtimeShelfOsaRate" -> saveOsa(payload);
+                                case "Shelf" -> saveShelf(payload);
+                            }
+                            messagingTemplate.convertAndSend("/topic/shelf-updates", payload);
+
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
+    private void saveDetail(Map<String, Object> payload) {
+        try {
+            UUID shelfId = UUID.fromString((String) payload.get("shelfId"));
+
+            // Lấy Shelf từ DB (hoặc null nếu chưa có)
+            Optional<Shelf> shelfOpt = shelfRepo.findById(shelfId);
+            if (shelfOpt.isEmpty()) {
+                System.out.println("Shelf not found for ID: " + shelfId);
+                return;
+            }
+
+            RealtimeShelfDetail detail = RealtimeShelfDetail.builder()
+                    .shelf(shelfOpt.get())
+                    .windowStart(Instant.ofEpochMilli(((Number) payload.get("windowStart")).longValue()))
+                    .windowEnd(Instant.ofEpochMilli(((Number) payload.get("windowEnd")).longValue()))
+                    .shelfOperatingHours(BigDecimal.valueOf(((Number) payload.get("shelfOperatingHours")).doubleValue()))
+                    .shelfShortageHours(BigDecimal.valueOf(((Number) payload.get("shelfShortageHours")).doubleValue()))
+                    .timesAlerted(((Number) payload.get("timesAlerted")).intValue())
+                    .timesReplenished(((Number) payload.get("timesReplenished")).intValue())
+                    .build();
+
+            detailRepo.save(detail);
+            System.out.println("✅ Saved RealtimeShelfDetail: " + detail.getDetailId());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveOsa(Map<String, Object> payload) {
+        try {
+            UUID shelfId = UUID.fromString((String) payload.get("shelfId"));
+
+            Optional<Shelf> shelfOpt = shelfRepo.findById(shelfId);
+            if (shelfOpt.isEmpty()) {
+                System.out.println("Shelf not found for ID: " + shelfId);
+                return;
+            }
+
+            RealtimeShelfOsaRate osa = RealtimeShelfOsaRate.builder()
+                    .shelf(shelfOpt.get())
+                    .ts(Instant.ofEpochMilli(((Number) payload.get("ts")).longValue()))
+                    .osaRatePct(BigDecimal.valueOf(((Number) payload.get("osaRatePct")).doubleValue()))
+                    .durationAboveThresholdMinutes(BigDecimal.valueOf(((Number) payload.get("durationAboveThresholdMinutes")).doubleValue()))
+                    .durationEmptyRatio100Minutes(BigDecimal.valueOf(((Number) payload.get("durationEmptyRatio100Minutes")).doubleValue()))
+                    .build();
+
+            osaRepo.save(osa);
+            System.out.println("✅ Saved RealtimeShelfOsaRate: " + osa.getOsaId());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveShelf(Map<String, Object> payload) {
+        try {
+            UUID shelfId = UUID.fromString((String) payload.get("shelfId"));
+
+            // Nếu shelf đã tồn tại → update, ngược lại → tạo mới
+            Shelf shelf = shelfRepo.findById(shelfId).orElse(new Shelf());
+            shelf.setShelfId(shelfId);
+            shelf.setName((String) payload.get("name"));
+            shelf.setArea((String) payload.get("area"));
+            shelf.setEmptyRatioThreshold(BigDecimal.valueOf(((Number) payload.get("emptyRatioThreshold")).doubleValue()));
+            shelf.setActive((Boolean) payload.get("isActive"));
+
+            shelfRepo.save(shelf);
+            System.out.println("✅ Saved Shelf: " + shelf.getShelfId());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}

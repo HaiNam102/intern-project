@@ -18,16 +18,17 @@
     "mpegts.js": "^1.8.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.3",
-    "react-scripts": "5.0.1",
+    "react-router-dom": "^7.8.0",
     "socket.io-client": "^4.8.1",
     "sockjs-client": "^1.6.1",
     "styled-components": "^6.1.8",
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "dev": "vite",
     "build": "react-scripts build",
+    "preview": "vite preview",
+    "start": "react-scripts start",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
@@ -50,8 +51,16 @@
     ]
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.2.1",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@types/sockjs-client": "^1.5.4",
+    "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.21",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17"
+    "tailwindcss": "^3.4.17",
+    "typescript": "^4.9.5",
+    "vite": "^7.1.2"
   }
 }

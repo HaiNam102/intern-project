@@ -31,7 +31,7 @@ public class CameraAutoHealthService {
     Map<Long, Boolean> cameraPreviousStatus = new ConcurrentHashMap<>();
 //    CameraRepository cameraRepository;
 
-    @Scheduled(fixedRate = 5000) // 10 seconds
+//    @Scheduled(fixedRate = 5000) // 10 seconds
     public void autoCheckAllCameras() {
         log.info("Bắt đầu kiểm tra sức khỏe tự động cho tất cả camera...");
         

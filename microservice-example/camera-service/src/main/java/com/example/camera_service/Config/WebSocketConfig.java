@@ -18,7 +18,7 @@ public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBro
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(streamHandler, "/stream")
-                .setAllowedOrigins("http://localhost:3000", "http://127.0.0.1:3000", "http://192.168.1.4:3000");
+                .setAllowedOrigins("http://localhost:3000", "http://127.0.0.1:3000", "http://192.168.1.4:3000","http://localhost:5173");
     }
 
     @Override
@@ -30,7 +30,7 @@ public class WebSocketConfig implements WebSocketConfigurer, WebSocketMessageBro
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins("http://localhost:3000", "http://127.0.0.1:3000", "http://192.168.1.4:3000")
+                .setAllowedOrigins("http://localhost:3000", "http://127.0.0.1:3000", "http://192.168.1.4:3000","http://localhost:5173")
                 .withSockJS();
     }
 

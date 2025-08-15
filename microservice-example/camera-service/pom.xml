@@ -9,9 +9,9 @@
 		<relativePath/>
 	</parent>
 	<groupId>com.example</groupId>
-	<artifactId>chat-message</artifactId>
+	<artifactId>camera-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>chat-message</name>
+	<name>camera-service</name>
 	<description>Demo project for Spring Boot</description>
 	<properties>
 		<java.version>21</java.version>
