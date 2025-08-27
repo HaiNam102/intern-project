@@ -11,7 +11,10 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -38,4 +41,19 @@ public class ShelfDetailService {
     public List<RealtimeShelfDetail> range(UUID shelfId, Instant from, Instant to) {
         return repo.findByShelfAndWindowRange(shelfId, from, to);
     }
+
+    public Object getAvg(UUID storeId, List<UUID> shelfIds, LocalDate dateStart, LocalDate dateEnd) {
+        if (shelfIds == null || shelfIds.isEmpty()) {
+            return repo.findAvgByStore(storeId);
+        } else {
+            Instant start = dateStart.atStartOfDay(ZoneOffset.UTC).toInstant();
+            Instant end = dateEnd.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+            List<Object[]> results = repo.findDailyAvgByStoreAndShelves(storeId, shelfIds, start, end);
+            return results.stream().map(r -> Map.of(
+                    "date", r[0].toString(),
+                    "avgShortageRate", Math.round(((Number) r[1]).doubleValue() * 10000.0) / 100.0
+            )).toList();
+        }
+    }
+
 }

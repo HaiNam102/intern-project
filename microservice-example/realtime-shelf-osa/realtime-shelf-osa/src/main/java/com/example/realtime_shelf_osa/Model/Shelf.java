@@ -1,5 +1,6 @@
 package com.example.realtime_shelf_osa.Model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -22,6 +23,11 @@ public class Shelf {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "shelf_id", columnDefinition = "BINARY(16)", nullable = false)
     private UUID shelfId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    @JsonIgnore
+    private Store store;
 
     @NotBlank
     @Column(name = "name", nullable = false)

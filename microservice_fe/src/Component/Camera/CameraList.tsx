@@ -20,15 +20,18 @@ import {
   callGetAllCameras, 
   callDeleteCamera, 
   callHealthCheck 
-} from '../../services/api';
+} from '../../services/api'; // Adjust the import path as necessary
 import WebSocketService from '../../services/websocket';
 
 interface Camera {
+  id: number;
   cameraId: number;
   nameCamera: string;
   location: string;
   status: string;
   streamUrl: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface CameraHealthData {
@@ -48,6 +51,7 @@ interface RealTimeStatus {
   timestamp?: string;
   errorMessage?: string;
 }
+
 
 const CameraList = (): JSX.Element => {
   const navigate = useNavigate();
@@ -176,7 +180,7 @@ const CameraList = (): JSX.Element => {
         message.error('Không tìm thấy ID camera');
         return;
       }
-      const response = await callHealthCheck(cameraId.toString());
+      const response = await callHealthCheck(cameraId);
       message.destroy();
       
       if (response.code === 200) {
@@ -386,7 +390,7 @@ const CameraList = (): JSX.Element => {
           {cameras.map((camera) => {
             const realTimeStatus = getRealTimeStatus(camera);
             const displayStatus = realTimeStatus ? realTimeStatus.status : camera.status;
-            const cameraImage = getCameraImageByStatus(displayStatus);
+            const cameraImage = getCameraImageByStatus(displayStatus?.toString() || 'default');
             
             return (
               <Card
@@ -448,8 +452,8 @@ const CameraList = (): JSX.Element => {
                     <CameraOutlined />
                     {camera.nameCamera}
                     <Badge 
-                      status={getStatusColor(displayStatus)} 
-                      text={getStatusText(displayStatus)} 
+                      status={getStatusColor(displayStatus?.toString() || 'default')} 
+                      text={getStatusText(displayStatus?.toString() || 'default')} 
                     />
                     {realTimeStatus && (
                       <Tag color="blue">Realtime</Tag>
@@ -538,8 +542,8 @@ const CameraList = (): JSX.Element => {
                   </Descriptions.Item>
                   <Descriptions.Item label="Trạng thái">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Tag color={getStatusColor(displayStatus)}>
-                        {getStatusText(displayStatus)}
+                      <Tag color={getStatusColor(displayStatus?.toString() || 'default')}>
+                        {getStatusText(displayStatus?.toString() || 'default')}
                       </Tag>
                       {displayStatus === 'ONLINE' && (
                         <Tag color="green" icon={<CheckCircleOutlined />}>

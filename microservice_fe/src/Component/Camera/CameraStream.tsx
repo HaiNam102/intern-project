@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, JSX } from 'react';
 import { Button, Badge, Descriptions } from 'antd';
 import {
   PlayCircleOutlined,
@@ -64,7 +64,7 @@ interface CameraInfo {
   location: string;
 }
 
-const CameraStream = (): React.ReactElement => {
+const CameraStream = (): JSX.Element => {
   const { cameraId } = useParams<{ cameraId: string }>();
   const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);

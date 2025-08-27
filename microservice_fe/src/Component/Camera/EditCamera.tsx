@@ -31,7 +31,7 @@ const EditCamera = (): JSX.Element => {
           setError('ID camera không hợp lệ');
           return;
         }
-        const response = await callGetCameraById(id);
+        const response = await callGetCameraById(Number(id));
         if (response.code === 200 && response.data) {
           setFormData({
             nameCamera: response.data.nameCamera || '',
@@ -60,13 +60,13 @@ const EditCamera = (): JSX.Element => {
     setLoading(true);
     setError(null);
 
-    try {
+    try { 
       if (!id) {
         setError('ID camera không hợp lệ');
         setLoading(false);
         return;
       }
-      const response = await callUpdateCamera(id, formData);
+      const response = await callUpdateCamera(Number(id), formData);
       if (response.code === 200) {
         navigate('/cameras'); // Redirect to camera list
       } else {

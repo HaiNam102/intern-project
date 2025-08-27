@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { callCreateCamera } from '../../services/api';
+import { callCreateCamera } from '../../services/api'; // Adjust the import path as necessary
 
 interface FormData {
   nameCamera: string;

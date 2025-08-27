@@ -25,7 +25,7 @@ import {
   ReloadOutlined,
   DashboardOutlined
 } from '@ant-design/icons';
-import { callGetAllCameras } from '../../services/api';
+import { callGetAllCameras } from '../../services/api'; // Adjust the import path as necessary
 import WebSocketService from '../../services/websocket';
 
 // Kiểu dữ liệu cho camera

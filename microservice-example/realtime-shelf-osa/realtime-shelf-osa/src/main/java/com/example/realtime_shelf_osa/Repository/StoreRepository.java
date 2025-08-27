@@ -1,6 +1,5 @@
 package com.example.realtime_shelf_osa.Repository;
 
-import com.example.realtime_shelf_osa.Model.Shelf;
 import com.example.realtime_shelf_osa.Model.Store;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -10,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.UUID;
 
 @Repository
-public interface ShelfRepository extends JpaRepository<Shelf, UUID> {
-    @Query("SELECT s.store FROM Shelf s WHERE s.shelfId = :shelfId")
-    Store findStoreByShelfId(@Param("shelfId") UUID shelfId);
+public interface StoreRepository extends JpaRepository<Store, UUID> {
+//    @Query("SELECT s FROM Store s WHERE s.shelfs.shelfId = :shelfId")
+//    Store findStoreByShelfId(@Param("shelfId") UUID shelfId);
 }

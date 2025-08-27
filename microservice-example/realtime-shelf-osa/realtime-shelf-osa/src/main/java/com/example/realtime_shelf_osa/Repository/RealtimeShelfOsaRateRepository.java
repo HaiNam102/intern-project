@@ -1,5 +1,6 @@
 package com.example.realtime_shelf_osa.Repository;
 
+import com.example.realtime_shelf_osa.Model.RealtimeShelfDetail;
 import com.example.realtime_shelf_osa.Model.RealtimeShelfOsaRate;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -32,4 +33,11 @@ public interface RealtimeShelfOsaRateRepository extends JpaRepository<RealtimeSh
             @Param("shelfId") UUID shelfId,
             @Param("fromTs") Instant from,
             @Param("toTs") Instant to);
+
+    @Query("SELECT r FROM RealtimeShelfOsaRate r WHERE r.shelf.shelfId = :shelfId")
+    List<RealtimeShelfOsaRate> findByShelf_ShelfId(@Param("shelfId") UUID shelfId);
+
+    @Query("SELECT AVG(d.shelfShortageRate) FROM RealtimeShelfDetail d WHERE d.shelf.store.storeId = :storeId AND d.shelf.shelfId IN :shelfIds")
+    Double findAvgByStoreAndShelvesAndDate(@Param("storeId") UUID storeId,
+                                           @Param("shelfIds") List<UUID> shelfIds);
 }

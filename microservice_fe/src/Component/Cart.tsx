@@ -156,7 +156,7 @@ const Cart = (): JSX.Element => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-2"> 
                         <button 
                           className="p-1 rounded-full hover:bg-gray-100"
                           onClick={() => updateQuantity(item.productId, item.quantity - 1)}

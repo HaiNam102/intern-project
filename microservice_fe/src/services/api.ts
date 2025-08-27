@@ -3,13 +3,15 @@ import axios, { AxiosResponse } from 'axios';
 const API_BASE_URL = 'http://localhost:8084/api';
 
 // Định nghĩa interface cho Camera
-export interface Camera {
+interface Camera {
   id: number;
-  name: string;
-  location?: string;
-  ip?: string;
-  status?: string;
-  [key: string]: any; // phòng khi backend trả thêm field
+  cameraId: number;
+  nameCamera: string;
+  location: string;
+  status: string;
+  streamUrl: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface ApiResponse<T> {
@@ -35,9 +37,14 @@ export const callGetCameraById = async (id: number): Promise<ApiResponse<Camera>
 };
 
 
-export const callCreateCamera = async (cameraData: Partial<Camera>): Promise<Camera> => {
+export const callCreateCamera = async (
+  cameraData: Partial<Camera>
+): Promise<ApiResponse<Camera>> => {
   try {
-    const response: AxiosResponse<Camera> = await axios.post(`${API_BASE_URL}/cameras/create`, cameraData);
+    const response: AxiosResponse<ApiResponse<Camera>> = await axios.post(
+      `${API_BASE_URL}/cameras/create`,
+      cameraData
+    );
     return response.data;
   } catch (error) {
     console.error('Error creating camera:', error);
@@ -45,15 +52,24 @@ export const callCreateCamera = async (cameraData: Partial<Camera>): Promise<Cam
   }
 };
 
-export const callUpdateCamera = async (id: number, cameraData: Partial<Camera>): Promise<Camera> => {
+
+// services/api.ts
+export const callUpdateCamera = async (
+  id: number,
+  cameraData: Partial<Camera>
+): Promise<ApiResponse<Camera>> => {
   try {
-    const response: AxiosResponse<Camera> = await axios.put(`${API_BASE_URL}/cameras/${id}`, cameraData);
+    const response: AxiosResponse<ApiResponse<Camera>> = await axios.put(
+      `${API_BASE_URL}/cameras/${id}`,
+      cameraData
+    );
     return response.data;
   } catch (error) {
     console.error('Error updating camera:', error);
     throw error;
   }
 };
+
 
 
 export const callDeleteCamera = async (id: number): Promise<ApiResponse<Camera[]>> => {

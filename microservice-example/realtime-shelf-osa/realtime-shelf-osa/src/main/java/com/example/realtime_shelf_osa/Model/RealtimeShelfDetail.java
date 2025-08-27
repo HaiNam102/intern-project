@@ -33,16 +33,14 @@ public class RealtimeShelfDetail {
     @Column(name = "window_end", nullable = false, columnDefinition = "datetime(6)")
     private Instant windowEnd;
 
-    @NotNull
     @Column(name = "shelf_operating_hours", precision = 7, scale = 2, nullable = false)
     private BigDecimal shelfOperatingHours;
 
-    @NotNull
     @Column(name = "shelf_shortage_hours", precision = 7, scale = 2, nullable = false)
     private BigDecimal shelfShortageHours;
 
     // generated stored column in DB; mark read-only for JPA
-    @Column(name = "shelf_shortage_rate", precision = 5, scale = 2, insertable = false, updatable = false)
+    @Column(name = "shelf_shortage_rate", precision = 5, scale = 2)
     private BigDecimal shelfShortageRate;
 
     @Column(name = "times_alerted", nullable = false)

@@ -11,7 +11,7 @@ import {
   CheckCircleOutlined,
   ExclamationCircleOutlined
 } from '@ant-design/icons';
-import { callGetCameraById, callHealthCheck } from '../../services/api';
+import { callGetCameraById, callHealthCheck } from '../../services/api'; // Adjust the import path as necessary
 import WebSocketService from '../../services/websocket';
 
 interface Camera {
@@ -97,8 +97,8 @@ const CameraDetail: React.FC = () => {
       if (!id) {
         message.error('Không tìm thấy ID camera');
         return;
-      }
-      const response: ApiResponse<Camera> = await callGetCameraById(id);
+      }                                                 
+      const response: ApiResponse<Camera> = await callGetCameraById(Number(id));
 
       if (response.code === 200) {
         setCamera(response.data);
@@ -121,7 +121,7 @@ const CameraDetail: React.FC = () => {
         message.error('Không tìm thấy ID camera');
         return;
       }
-      const response = await callHealthCheck(id);
+      const response = await callHealthCheck(Number(id));
       message.destroy();
 
       if (response.code === 200) {
@@ -365,4 +365,5 @@ const CameraDetail: React.FC = () => {
 };
 
 export default CameraDetail;
+
 

@@ -12,10 +12,11 @@ import CreateCamera from './Component/Camera/CreateCamera';
 import EditCamera from './Component/Camera/EditCamera';
 import CameraDetail from './Component/Camera/CameraDetail';
 import CameraDashboard from './Component/Camera/CameraDashboard';
+import ShelfMonitorPage from './Component/Shelf/ShelfMonitorPage';
 import { JSX } from 'react';
 
 // Import WebSocket test utilities for development
-if (import.meta.env.MODE === 'development') {
+if (process.env.NODE_ENV === 'development') {
   import('./utils/websocketTest');
 }
 
@@ -35,6 +36,7 @@ function App(): JSX.Element {
           <Route path="/camera/edit/:id" element={<EditCamera />} />
           <Route path="/camera/detail/:id" element={<CameraDetail />} />
           <Route path="/camera/:cameraId" element={<CameraStream />} />
+          <Route path="/shelf" element={<ShelfMonitorPage />} />
         </Routes>
       </div>
     </Router>
